@@ -27,7 +27,7 @@ def create_long_short_memory(llm, session_id="default_user", vector_store=None):
         # 静态信息：人设、基础背景
         StaticMemoryBlock(
             name="core_info",
-            static_content="My name is Logan",
+            static_content="My name is Logan", #可以自定义修改
             priority=0,
         ),
         # 事实提取：自动总结对话细节
@@ -52,10 +52,10 @@ def create_long_short_memory(llm, session_id="default_user", vector_store=None):
     # 4. 封装成 Memory 对象
     memory = Memory.from_defaults(
         session_id=session_id,
-        token_limit=1000, #要存储的短期和长期记忆的最大数量
-        token_flush_size=900, # 每次短期记忆满了，挪出 2000 token 存入向量库
+        token_limit=8000, #要存储的短期和长期记忆的最大数量
+        token_flush_size=2000, # 每次短期记忆满了，挪出 2000 token 存入向量库
         memory_blocks=blocks,
-        chat_history_token_ratio=0.1, # 70% 的空间留给短期记忆（最近的对话）
+        chat_history_token_ratio=0.7, # 70% 的空间留给短期记忆（最近的对话）
         insert_method="system", # 记忆将以 System Message 的形式插入
     )
     
