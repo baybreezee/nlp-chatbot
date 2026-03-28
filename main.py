@@ -34,27 +34,23 @@ async def main():
         # 3. 获取用户输入
         user_msg = input("\n👤 你: ")
         if user_msg.lower() in ["exit", "quit", "退出"]:
-            # 退出前手动保存向量记忆
-            # vector_store.persist(persist_path)
-            print("👋 再见！记忆已保存。")
             break
 
         # 4. Agent 运行 (它会自动读取并更新传入的 memory)
-        # 注意：Workflow 模式下的 Agent 建议通过 memory 参数传递
         response = await agent.run(user_msg, memory=memory)
 
         # 5. 输出回答
         print(f"\n🤖 Agent: {response}")
     
-    print("\n--- 🔍 记忆状态监控 ---")
-    for block in memory.memory_blocks:
-        if block.name == "extracted_info":
-            # 打印出事实提取块里的内容
-            print(f"📌 已提取的事实: {block.get_content()}")
-        if block.name == "vector_memory":
-            # 看看向量库里现在有几条“陈年旧账”
-            print(f"📦 长期向量库大小: {len(block.vector_store.to_dict().get('embedding_dict', {}))} 条")
-    print("----------------------")
+    # print("\n--- 🔍 记忆状态监控 ---")
+    # for block in memory.memory_blocks:
+    #     if block.name == "extracted_info":
+    #         # 打印出事实提取块里的内容
+    #         print(f"📌 已提取的事实: {block.get_content()}")
+    #     if block.name == "vector_memory":
+    #         # 看看向量库里现在有几条“陈年旧账”
+    #         print(f"📦 长期向量库大小: {len(block.vector_store.to_dict().get('embedding_dict', {}))} 条")
+    # print("----------------------")
     # response = await agent.run(
     #     "Hey, remember what my job is? Also, I like coffee.", 
     #     memory=memory
