@@ -1,5 +1,3 @@
-os
 llama_index
-asyncio
 llama-index-embeddings-huggingface
 llama-index-llms-openai-like
