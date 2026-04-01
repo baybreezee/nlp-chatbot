@@ -1,5 +1,5 @@
-os
+python-dotenv
 llama_index
-asyncio
 llama-index-embeddings-huggingface
 llama-index-llms-openai-like
+llama-index-readers-file

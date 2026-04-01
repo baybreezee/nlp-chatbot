@@ -29,3 +29,7 @@ config/settings.local.php
 
 # 环境
 venv
+
+# doc_bench
+doc_bench/data
+doc_bench/data.zip
