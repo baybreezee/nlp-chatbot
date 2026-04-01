@@ -1,3 +1,4 @@
 llama_index
 llama-index-embeddings-huggingface
 llama-index-llms-openai-like
+llama-index-readers-file
