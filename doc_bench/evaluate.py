@@ -1,13 +1,30 @@
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Literal
 from pathlib import Path
 import zipfile
 import json
+import asyncio
+
+from llama_index.core import Document, SimpleDirectoryReader, SummaryIndex, VectorStoreIndex
+from llama_index.core.readers.file.base import default_file_metadata_func
+from llama_index.readers.file import PDFReader      # use pypdf internally
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.agent.workflow import FunctionAgent, BaseWorkflowAgent
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.llms.openai_like import OpenAILike
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core.evaluation import CorrectnessEvaluator
 
 DIR = Path(__file__).parent
 DATA_ZIP = DIR / "data.zip"
 DATA_FOLDER = DIR / "data"
 MIN_IDX = 0
 MAX_IDX = 228
+QATypes = Literal["text-only", "multimodal-f", "multimodal-t", "unanswerable", "meta-data", "una-web"]
+REF_TEMPLATE = """### Answer
+{answer}
+
+### Evidence (Evidence can help you make better judgement. It's not a mandatory part of a correct answer.)
+{evidence}"""
 
 
 def load_data_path(idx: int) -> Tuple[Path, Path]:
@@ -28,16 +45,119 @@ def read_qa_file(qa_path: Path) -> List[Dict]:
     return [json.loads(line) for line in lines]
 
 
-def create_questions(qa: List[Dict]) -> str:
-    q_string = (
-        "Based on the uploaded information, answer the following questions. "
-        "You should answer all above questions line by line with numerical numbers. \n"
+def load_pdf(path: Path) -> List[Document]:
+    return SimpleDirectoryReader.load_file(
+        input_file=path,
+        file_metadata=default_file_metadata_func,
+        file_extractor={".pdf": PDFReader()}
     )
-    for i, d in enumerate(qa):
-        q_string += f"{i+1}. {d['question']}\n"
-    return q_string
 
 
-# test: print questions for 66
+async def get_response(agent: BaseWorkflowAgent, question: str):
+    return await agent.run(question)
+
+
+def run(
+    model: str, 
+    api_key: str, 
+    base_url: str,
+    temperature: float = 0.1,
+    context_window: int = 32000,
+    mode: Literal["full_text", "chunks"] = "chunks",
+    agentic: bool = False,      # single-turn + prompt template, or multi-turn + tool-calling
+    chunk_size: int = 1024,     # be careful: chunk_size <= embed_model.max_seq_length
+    chunk_overlap: int = 200,
+    top_k: int = 5,
+    embed_model: str = "nomic-ai/nomic-embed-text-v1.5",
+    idx_list: List[int] | None = None,
+    qa_types: List[QATypes] | None = None
+):
+    llm = OpenAILike(
+        model=model,
+        api_key=api_key,
+        api_base=base_url,
+        temperature=temperature,
+        is_chat_model=True,
+        is_function_calling_model=agentic,
+        context_window=context_window
+    )
+    idx_list = idx_list if idx_list else list(range(5))
+    qa_types = qa_types if qa_types else ["text-only"]
+    results = []
+    for idx in idx_list:
+        try:
+            pdf_path, qa_path = load_data_path(idx)
+            documents = load_pdf(pdf_path)
+            qa = read_qa_file(qa_path)
+            if mode == "full_text":
+                index = SummaryIndex.from_documents(documents)
+            else:
+                index = VectorStoreIndex.from_documents(    # gpt-3.5-turbo tokenizer by default
+                    documents,
+                    transformations=[SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)],
+                    similarity_top_k=top_k,
+                    embed_model=HuggingFaceEmbedding(model_name=embed_model, trust_remote_code=True)
+                )
+        except Exception as e:
+            print(f"Failed to load {idx}: {e}")
+            continue
+        for data in qa:
+            if not data["type"] in qa_types:
+                continue
+            results.append({
+                "doc_idx": idx,
+                "question": data["question"],
+                "ref_answer": data["answer"],
+                "evidence": data.get("evidence", ""),
+                "generation_error": "",
+                "evaluation_error": ""
+            })
+            try:
+                if agentic:
+                    query_engine = index.as_query_engine(llm=llm)
+                    metadata = ToolMetadata(name="search_docs", description="Useful for answering questions.")
+                    agent = FunctionAgent(
+                        llm=llm, tools=[QueryEngineTool(query_engine=query_engine, metadata=metadata)]
+                    )
+                    response = asyncio.run(get_response(agent=agent, question=data["question"]))
+                    response = response.response.content
+                else:
+                    chat_engine = index.as_chat_engine(chat_mode="context", llm=llm)
+                    response = chat_engine.chat(data["question"]).response
+            except Exception as e:
+                print(f"Failed to generate answer (idx: {idx}, question: '{data['question']}'): {e}")
+                results[-1]["generation_error"] = str(e)
+                continue
+            else:
+                results[-1]["answer"] = response
+            evaluator = CorrectnessEvaluator(llm=llm)
+            if data.get("evidence", ""):
+                reference = REF_TEMPLATE.format(answer=data["answer"], evidence=data["evidence"])
+            else:
+                reference = data["answer"]
+            try:
+                result = evaluator.evaluate(query=data["question"], response=response, reference=reference)
+            except Exception as e:
+                print(f"Failed to evaluate (idx: {idx}, question: '{data['question']}'): {e}")
+                results[-1]["evaluation_error"] = str(e)
+            else:
+                results[-1]["feedback"] = result.feedback
+                results[-1]["score"] = result.score
+                results[-1]["passing"] = result.passing
+    return results
+
+
+# test: questions for 10
 if __name__ == "__main__":
-    print(create_questions(read_qa_file(load_data_path(66)[1])))
+    print(json.dumps(
+        run(
+            model="qwen3.5-0.8b",
+            api_key="none",
+            base_url="http://127.0.0.1:1234/v1",
+            mode="chunks",
+            agentic=False,
+            idx_list=[10]
+        ),
+        ensure_ascii=False,
+        indent=4
+    ))
