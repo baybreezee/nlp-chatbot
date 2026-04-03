@@ -30,6 +30,9 @@ config/settings.local.php
 # 环境
 venv
 
+# python
+__pycache__
+
 # doc_bench
 doc_bench/data
 doc_bench/data.zip
