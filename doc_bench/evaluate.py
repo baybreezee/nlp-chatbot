@@ -96,6 +96,10 @@ def run(
         )
     else:
         eval_llm = llm
+    if mode == "full_text":
+        embed_model = None
+    else:
+        embed_model = HuggingFaceEmbedding(model_name=embed_model, trust_remote_code=True)
     idx_list = idx_list if idx_list else list(range(5))
     qa_types = qa_types if qa_types else ["text-only"]
     results = []
@@ -111,7 +115,7 @@ def run(
                     documents,
                     transformations=[SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)],
                     similarity_top_k=top_k,
-                    embed_model=HuggingFaceEmbedding(model_name=embed_model, trust_remote_code=True)
+                    embed_model=embed_model
                 )
         except Exception as e:
             print(f"Failed to load {idx}: {e}")
