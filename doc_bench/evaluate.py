@@ -88,7 +88,7 @@ def run(
         context_window=context_window
     )
     if eval_model and eval_api_key and eval_base_url:
-        eval_llm = llm = OpenAILike(
+        eval_llm = OpenAILike(
             model=eval_model,
             api_key=eval_api_key,
             api_base=eval_base_url,
