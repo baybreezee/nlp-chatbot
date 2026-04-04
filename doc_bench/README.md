@@ -91,6 +91,17 @@ python -m doc_bench \
 |----------|-------------|---------|
 | `--temperature` | Randomness in generation (0-1) | 0.1 |
 | `--context-window` | Model's maximum token capacity | 32000 |
+| `--extra-body` | JSON string for OpenAI extra_body parameters | None |
+
+#### Evaluation (Judge) LLM
+
+By default, the same model is used for both generation and evaluation. Use these to specify a different model for judging answer correctness:
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--eval-model` | Model name for evaluation/judging | Same as `--model` |
+| `--eval-api-key` | API key for evaluation model | Same as `--api-key` |
+| `--eval-base-url` | Base URL for evaluation model | Same as `--base-url` |
 
 #### Output
 
@@ -116,6 +127,14 @@ python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
 
 # Custom output file
 python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL -o my_results.json
+
+# Use extra_body for provider-specific parameters
+python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
+    --extra-body '{"enable_thinking": true}'
+
+# Use a stronger model (e.g., GPT-4) for evaluation while testing a smaller model
+python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
+    --eval-model gpt-4 --eval-api-key GPT4_KEY --eval-base-url https://api.openai.com/v1
 ```
 
 ### Understanding Results
@@ -127,6 +146,7 @@ The output JSON contains:
   "metadata": {
     "model": "qwen2.5-7b",
     "mode": "chunks",
+    "eval_model": "gpt-4",
     "total_questions": 15,
     "timestamp": "2025-04-03T10:30:00"
   },

@@ -36,9 +36,15 @@ Examples:
     parser.add_argument("--api-key", required=True, help="API key for the LLM service")
     parser.add_argument("--base-url", required=True, help="Base URL for the LLM API (e.g., http://localhost:1234/v1)")
 
+    # Judge/Eval LLM (optional - uses main model if not specified)
+    parser.add_argument("--eval-model", default=None, help="Model name for evaluation/judging (default: same as --model)")
+    parser.add_argument("--eval-api-key", default=None, help="API key for evaluation model (default: same as --api-key)")
+    parser.add_argument("--eval-base-url", default=None, help="Base URL for evaluation model (default: same as --base-url)")
+
     # LLM parameters
     parser.add_argument("--temperature", type=float, default=0.1, help="Sampling temperature (default: 0.1)")
     parser.add_argument("--context-window", type=int, default=32000, help="Model context window size (default: 32000)")
+    parser.add_argument("--extra-body", type=str, default=None, help="JSON string for OpenAI extra_body (e.g., '{\"custom_param\": \"value\"}')")
 
     # Processing mode
     parser.add_argument(
@@ -83,9 +89,21 @@ Examples:
             if idx < MIN_IDX or idx > MAX_IDX:
                 parser.error(f"Index {idx} is out of range. Valid range: {MIN_IDX}-{MAX_IDX}")
 
+    # Parse extra_body JSON if provided
+    extra_body = None
+    if args.extra_body:
+        extra_body = json.loads(args.extra_body)
+
+    # Determine eval LLM settings
+    eval_model = args.eval_model if args.eval_model else None
+    eval_api_key = args.eval_api_key if args.eval_api_key else None
+    eval_base_url = args.eval_base_url if args.eval_base_url else None
+
     print(f"Starting DocBench evaluation...")
     print(f"  Model: {args.model}")
     print(f"  Base URL: {args.base_url}")
+    if eval_model:
+        print(f"  Eval Model: {eval_model}")
     print(f"  Mode: {args.mode}")
     print(f"  Agentic: {args.agentic}")
     print(f"  Documents: {args.idx_list if args.idx_list else 'first 5 (default)'}")
@@ -98,6 +116,7 @@ Examples:
         api_key=args.api_key,
         base_url=args.base_url,
         temperature=args.temperature,
+        extra_body=extra_body,
         context_window=args.context_window,
         mode=args.mode,
         agentic=args.agentic,
@@ -106,7 +125,10 @@ Examples:
         top_k=args.top_k,
         embed_model=args.embed_model,
         idx_list=args.idx_list,
-        qa_types=args.qa_types
+        qa_types=args.qa_types,
+        eval_model=eval_model,
+        eval_api_key=eval_api_key,
+        eval_base_url=eval_base_url
     )
 
     # Determine output path
@@ -122,6 +144,7 @@ Examples:
             "base_url": args.base_url,
             "temperature": args.temperature,
             "context_window": args.context_window,
+            "extra_body": extra_body,
             "mode": args.mode,
             "agentic": args.agentic,
             "chunk_size": args.chunk_size if args.mode == "chunks" else None,
@@ -130,6 +153,7 @@ Examples:
             "embed_model": args.embed_model if args.mode == "chunks" else None,
             "idx_list": args.idx_list if args.idx_list else list(range(5)),
             "qa_types": args.qa_types if args.qa_types else ["text-only"],
+            "eval_model": eval_model if eval_model else args.model,
             "total_questions": len(results),
             "timestamp": datetime.now().isoformat()
         },
