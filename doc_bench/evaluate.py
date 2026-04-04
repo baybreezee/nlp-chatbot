@@ -126,6 +126,7 @@ def run(
             results.append({
                 "doc_idx": idx,
                 "question": data["question"],
+                "type": data["type"],
                 "ref_answer": data["answer"],
                 "evidence": data.get("evidence", ""),
                 "generation_error": "",

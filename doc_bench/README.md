@@ -171,14 +171,14 @@ The output JSON contains:
 
 ## Experiment
 
-### PDF
+### PDFs and Questions
 
 ```
 Error reading PDF for idx 72: cryptography>=3.1 is required for AES algorithm
 Error reading PDF for idx 73: cryptography>=3.1 is required for AES algorithm
 Total documents: 227
-Documents passing filter (<= 30 pages): 149
-Documents filtered out: 78
+Documents passing filter (<= 12 pages): 101
+Documents filtered out: 126
 
 Top 10 longest documents (filtered out):
   Index 53: 844 pages
@@ -201,9 +201,49 @@ Page count distribution:
   101+ pages: 44 documents
 ```
 
+- Remove 142, 187, 203, because it triggers "Sensitive Content" API error 😅.
+- Questions types: `text-only` and `unanswerable`.
+- Number of questions: 202.
+
 ### Models
 
-TODO
+- Evaluated LLM 1: [DeepSeek-V3.2](https://huggingface.co/deepseek-ai/DeepSeek-V3.2) (non-thinking)
+- Evaluated LLM 2: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B) (non-thinking)
+- Judge LLM: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B)
+
+### Results
+
+#### Baseline
+
+**Params**
+
+- `mode="chunks"`
+- `agentic=False`
+- `chunk_size=1024`
+- `chunk_overlap=200`
+- `top_k=2`
+
+**DeepSeek-V3.2**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 148 | 131 | 4.66 |
+| unanswerable | 54 | 40 | 4.24 |
+| all | 202 | 171 | 4.54 |
+
+**Qwen3.5-27B**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 148 | 129 | 4.62 |
+| unanswerable | 54 | 47 | 4.67 |
+| all | 202 | 176 | 4.63 |
+
+#### Improvement
+
+**Params**
+
+- todo
 
 ## Reference
 
