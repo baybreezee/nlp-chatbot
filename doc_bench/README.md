@@ -149,6 +149,42 @@ The output JSON contains:
 - **Passing**: Boolean indicating if the answer meets quality threshold
 - **Feedback**: Explanation of the evaluation
 
+## Experiment
+
+### PDF
+
+```
+Error reading PDF for idx 72: cryptography>=3.1 is required for AES algorithm
+Error reading PDF for idx 73: cryptography>=3.1 is required for AES algorithm
+Total documents: 227
+Documents passing filter (<= 30 pages): 149
+Documents filtered out: 78
+
+Top 10 longest documents (filtered out):
+  Index 53: 844 pages
+  Index 83: 564 pages
+  Index 64: 449 pages
+  Index 66: 382 pages
+  Index 81: 339 pages
+  Index 120: 330 pages
+  Index 110: 318 pages
+  Index 63: 316 pages
+  Index 62: 312 pages
+  Index 54: 293 pages
+
+Page count distribution:
+  0-10 pages: 83 documents
+  11-20 pages: 51 documents
+  21-30 pages: 15 documents
+  31-50 pages: 9 documents
+  51-100 pages: 25 documents
+  101+ pages: 44 documents
+```
+
+### Models
+
+TODO
+
 ## Reference
 
 - [repo link](https://github.com/Anni-Zou/DocBench)
