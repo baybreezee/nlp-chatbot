@@ -91,6 +91,17 @@ python -m doc_bench \
 |----------|-------------|---------|
 | `--temperature` | Randomness in generation (0-1) | 0.1 |
 | `--context-window` | Model's maximum token capacity | 32000 |
+| `--extra-body` | JSON string for OpenAI extra_body parameters | None |
+
+#### Evaluation (Judge) LLM
+
+By default, the same model is used for both generation and evaluation. Use these to specify a different model for judging answer correctness:
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--eval-model` | Model name for evaluation/judging | Same as `--model` |
+| `--eval-api-key` | API key for evaluation model | Same as `--api-key` |
+| `--eval-base-url` | Base URL for evaluation model | Same as `--base-url` |
 
 #### Output
 
@@ -116,6 +127,14 @@ python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
 
 # Custom output file
 python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL -o my_results.json
+
+# Use extra_body for provider-specific parameters
+python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
+    --extra-body '{"enable_thinking": true}'
+
+# Use a stronger model (e.g., GPT-4) for evaluation while testing a smaller model
+python -m doc_bench --model qwen2.5-7b --api-key KEY --base-url URL \
+    --eval-model gpt-4 --eval-api-key GPT4_KEY --eval-base-url https://api.openai.com/v1
 ```
 
 ### Understanding Results
@@ -127,6 +146,7 @@ The output JSON contains:
   "metadata": {
     "model": "qwen2.5-7b",
     "mode": "chunks",
+    "eval_model": "gpt-4",
     "total_questions": 15,
     "timestamp": "2025-04-03T10:30:00"
   },
@@ -148,6 +168,131 @@ The output JSON contains:
 - **Score**: 1-5 rating of answer quality (higher is better)
 - **Passing**: Boolean indicating if the answer meets quality threshold
 - **Feedback**: Explanation of the evaluation
+
+## Experiment
+
+### PDFs and Questions
+
+```
+Error reading PDF for idx 72: cryptography>=3.1 is required for AES algorithm
+Error reading PDF for idx 73: cryptography>=3.1 is required for AES algorithm
+Total documents: 227
+Documents passing filter (<= 12 pages): 101
+Documents filtered out: 126
+
+Top 10 longest documents (filtered out):
+  Index 53: 844 pages
+  Index 83: 564 pages
+  Index 64: 449 pages
+  Index 66: 382 pages
+  Index 81: 339 pages
+  Index 120: 330 pages
+  Index 110: 318 pages
+  Index 63: 316 pages
+  Index 62: 312 pages
+  Index 54: 293 pages
+
+Page count distribution:
+  0-10 pages: 83 documents
+  11-20 pages: 51 documents
+  21-30 pages: 15 documents
+  31-50 pages: 9 documents
+  51-100 pages: 25 documents
+  101+ pages: 44 documents
+```
+
+- Remove 142, 187, 203, because it triggers "Sensitive Content" API error 😅.
+- Questions types: `text-only` and `unanswerable`.
+- Number of questions: 202.
+
+### Models
+
+- Evaluated LLM 1: [DeepSeek-V3.2](https://huggingface.co/deepseek-ai/DeepSeek-V3.2) (non-thinking)
+- Evaluated LLM 2: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B) (non-thinking)
+- Judge LLM: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B)
+- Embedding Model: [nomic-embed-text-v1.5](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5)
+
+### Results
+
+#### Baseline
+
+**PDFs**
+
+```
+0 1 2 3 4 8 9 10 12 13 14 15 16 17 18 19 20 21 22 24 25 26 28 29 31 32 34 35 36 38 40 41 44 45 46 47 48 85 89 97 103 123 125 141 145 146 148 152 155 175 179 180 181 182 183 184 185 186 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228
+```
+
+**Params**
+
+- `mode="chunks"`
+- `agentic=False`
+- `chunk_size=1024`
+- `chunk_overlap=200`
+- `top_k=2`
+
+**DeepSeek-V3.2**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 148 | 131 | 4.66 |
+| unanswerable | 54 | 40 | 4.24 |
+| all | 202 | 171 | 4.54 |
+
+**Qwen3.5-27B**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 148 | 129 | 4.62 |
+| unanswerable | 54 | 47 | 4.67 |
+| all | 202 | 176 | 4.63 |
+
+#### Improvement
+
+**PDFs**
+
+```
+0 1 3 10 12 13 16 17 21 28 34 35 36 41 44 45 46 47 85 89 97 123 145 146 148 155 175 192 193 194 196 200 204 228
+```
+
+**Params**
+
+- `mode="chunks"`
+- `agentic=True`
+- `chunk_size=2048`
+- `chunk_overlap=200`
+- `top_k=5`
+
+**Baseline (DeepSeek-V3.2)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 39 | 4.09 |
+| unanswerable | 20 | 6 | 2.95 |
+| all | 76 | 45 | 3.79 |
+
+**Improvement (DeepSeek-V3.2)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 44 | 4.35 |
+| unanswerable | 20 | 12 | 3.75 |
+| all | 76 | 56 | 4.19 |
+
+**Baseline (Qwen3.5-27B)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 37 | 3.99 |
+| unanswerable | 20 | 13 | 4.1 |
+| all | 76 | 50 | 4.02 |
+
+**Improvement (Qwen3.5-27B)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 43 | 4.34 |
+| unanswerable | 20 | 13 | 4.03 |
+| all | 76 | 56 | 4.26 |
 
 ## Reference
 

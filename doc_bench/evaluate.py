@@ -62,6 +62,7 @@ def run(
     api_key: str, 
     base_url: str,
     temperature: float = 0.1,
+    extra_body: Dict | None = None,     # openai extra_body
     context_window: int = 32000,
     mode: Literal["full_text", "chunks"] = "chunks",
     agentic: bool = False,      # single-turn + prompt template, or multi-turn + tool-calling
@@ -70,17 +71,35 @@ def run(
     top_k: int = 5,
     embed_model: str = "nomic-ai/nomic-embed-text-v1.5",
     idx_list: List[int] | None = None,
-    qa_types: List[QATypes] | None = None
+    qa_types: List[QATypes] | None = None,
+    # judge model if specified
+    eval_model: str | None = None,
+    eval_api_key: str | None = None,
+    eval_base_url: str | None = None
 ):
     llm = OpenAILike(
         model=model,
         api_key=api_key,
         api_base=base_url,
         temperature=temperature,
+        additional_kwargs={"extra_body": extra_body},
         is_chat_model=True,
         is_function_calling_model=agentic,
         context_window=context_window
     )
+    if eval_model and eval_api_key and eval_base_url:
+        eval_llm = OpenAILike(
+            model=eval_model,
+            api_key=eval_api_key,
+            api_base=eval_base_url,
+            is_chat_model=True
+        )
+    else:
+        eval_llm = llm
+    if mode == "full_text":
+        embed_model = None
+    else:
+        embed_model = HuggingFaceEmbedding(model_name=embed_model, trust_remote_code=True)
     idx_list = idx_list if idx_list else list(range(5))
     qa_types = qa_types if qa_types else ["text-only"]
     results = []
@@ -96,7 +115,7 @@ def run(
                     documents,
                     transformations=[SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)],
                     similarity_top_k=top_k,
-                    embed_model=HuggingFaceEmbedding(model_name=embed_model, trust_remote_code=True)
+                    embed_model=embed_model
                 )
         except Exception as e:
             print(f"Failed to load {idx}: {e}")
@@ -107,6 +126,7 @@ def run(
             results.append({
                 "doc_idx": idx,
                 "question": data["question"],
+                "type": data["type"],
                 "ref_answer": data["answer"],
                 "evidence": data.get("evidence", ""),
                 "generation_error": "",
@@ -130,7 +150,7 @@ def run(
                 continue
             else:
                 results[-1]["answer"] = response
-            evaluator = CorrectnessEvaluator(llm=llm)
+            evaluator = CorrectnessEvaluator(llm=eval_llm)
             if data.get("evidence", ""):
                 reference = REF_TEMPLATE.format(answer=data["answer"], evidence=data["evidence"])
             else:
