@@ -210,10 +210,17 @@ Page count distribution:
 - Evaluated LLM 1: [DeepSeek-V3.2](https://huggingface.co/deepseek-ai/DeepSeek-V3.2) (non-thinking)
 - Evaluated LLM 2: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B) (non-thinking)
 - Judge LLM: [Qwen3.5-27B](https://huggingface.co/Qwen/Qwen3.5-27B)
+- Embedding Model: [nomic-embed-text-v1.5](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5)
 
 ### Results
 
 #### Baseline
+
+**PDFs**
+
+```
+0 1 2 3 4 8 9 10 12 13 14 15 16 17 18 19 20 21 22 24 25 26 28 29 31 32 34 35 36 38 40 41 44 45 46 47 48 85 89 97 103 123 125 141 145 146 148 152 155 175 179 180 181 182 183 184 185 186 188 189 190 191 192 193 194 195 196 197 198 199 200 201 202 204 205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227 228
+```
 
 **Params**
 
@@ -241,9 +248,51 @@ Page count distribution:
 
 #### Improvement
 
+**PDFs**
+
+```
+0 1 3 10 12 13 16 17 21 28 34 35 36 41 44 45 46 47 85 89 97 123 145 146 148 155 175 192 193 194 196 200 204 228
+```
+
 **Params**
 
-- todo
+- `mode="chunks"`
+- `agentic=True`
+- `chunk_size=2048`
+- `chunk_overlap=200`
+- `top_k=5`
+
+**Baseline (DeepSeek-V3.2)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 39 | 4.09 |
+| unanswerable | 20 | 6 | 2.95 |
+| all | 76 | 45 | 3.79 |
+
+**Improvement (DeepSeek-V3.2)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 44 | 4.35 |
+| unanswerable | 20 | 12 | 3.75 |
+| all | 76 | 56 | 4.19 |
+
+**Baseline (Qwen3.5-27B)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 37 | 3.99 |
+| unanswerable | 20 | 13 | 4.1 |
+| all | 76 | 50 | 4.02 |
+
+**Improvement (Qwen3.5-27B)**
+
+| type | count | passing | avg score |
+| --- | --- | --- | --- |
+| text-only | 56 | 43 | 4.34 |
+| unanswerable | 20 | 13 | 4.03 |
+| all | 76 | 56 | 4.26 |
 
 ## Reference
 
